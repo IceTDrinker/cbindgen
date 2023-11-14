@@ -104,6 +104,7 @@ fn load_bindings(input: &Path, matches: &ArgMatches) -> Result<Bindings, Error> 
         input,
         matches.value_of("lockfile"),
         matches.value_of("crate"),
+        matches.value_of("crate-version"),
         true,
         matches.is_present("clean"),
         matches.is_present("only-target-dependencies"),
@@ -212,6 +213,18 @@ fn main() {
                 .help(
                     "If generating bindings for a crate, \
                      the specific crate to generate bindings for",
+                )
+                .required(false),
+        )
+        .arg(
+            Arg::new("crate-version")
+                .long("crate-version")
+                .value_name("CRATE_VERSION")
+                .help(
+                    "If generating bindings for a crate, \
+                     the specific version of the crate to generate bindings for. \
+                     This option is useful if a dependency shares the same name \
+                     as the current project helping disambiguate which crate is targeted.",
                 )
                 .required(false),
         )

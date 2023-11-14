@@ -25,6 +25,7 @@ fn parse_dep_string(dep_string: &str) -> (&str, Option<&str>) {
 pub(crate) struct Cargo {
     manifest_path: PathBuf,
     binding_crate_name: String,
+    binding_crate_version: Option<String>,
     lock: Option<Lock>,
     metadata: Metadata,
     clean: bool,
@@ -38,6 +39,7 @@ impl Cargo {
         crate_dir: &Path,
         lock_file: Option<&str>,
         binding_crate_name: Option<&str>,
+        binding_crate_version: Option<&str>,
         use_cargo_lock: bool,
         clean: bool,
         only_target_dependencies: bool,
@@ -73,9 +75,12 @@ impl Cargo {
             }
         };
 
+        let binding_crate_version = binding_crate_version.map(|s| s.to_owned());
+
         Ok(Cargo {
             manifest_path: toml_path,
             binding_crate_name,
+            binding_crate_version,
             lock,
             metadata,
             clean,
@@ -181,11 +186,32 @@ impl Cargo {
     }
 
     /// Finds the package reference in `cargo metadata` that has `package_name`
-    /// ignoring the version.
+    /// ignoring the version if it was not requested explicitely.
     fn find_pkg_ref(&self, package_name: &str) -> Option<PackageRef> {
         for package in &self.metadata.packages {
             if package.name_and_version.name == package_name {
-                return Some(package.name_and_version.clone());
+                match (
+                    &self.binding_crate_version,
+                    &package.name_and_version.version,
+                ) {
+                    (Some(requested_version), Some(found_package_version)) => {
+                        if requested_version.as_str() == found_package_version.as_str() {
+                            // We found the package matching the name and requested version, return
+                            // it
+                            return Some(package.name_and_version.clone());
+                        } else {
+                            // Found a package with the same name but a different version continue.
+                            continue;
+                        }
+                    }
+                    // A version was requested, but the found package does not have a version, so
+                    // keep looking
+                    (Some(_), None) => continue,
+                    // No version requested, return the found package
+                    // Note that this has random behavior if more than one package found in cargo
+                    // metadata have the same name
+                    (None, _) => return Some(package.name_and_version.clone()),
+                }
             }
         }
         None

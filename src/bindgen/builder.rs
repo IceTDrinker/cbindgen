@@ -17,6 +17,7 @@ pub struct Builder {
     config: Config,
     srcs: Vec<path::PathBuf>,
     lib: Option<(path::PathBuf, Option<String>)>,
+    lib_version: Option<String>,
     lib_cargo: Option<Cargo>,
     std_types: bool,
     lockfile: Option<path::PathBuf>,
@@ -29,6 +30,7 @@ impl Builder {
             config: Config::default(),
             srcs: Vec::new(),
             lib: None,
+            lib_version: None,
             lib_cargo: None,
             std_types: true,
             lockfile: None,
@@ -314,6 +316,13 @@ impl Builder {
     }
 
     #[allow(unused)]
+    pub fn with_crate_version(mut self, lib_version_str: &str) -> Builder {
+        debug_assert!(self.lib_version.is_none());
+        self.lib_version = Some(lib_version_str.to_owned());
+        self
+    }
+
+    #[allow(unused)]
     pub fn with_crate_and_name<P: AsRef<path::Path>, S: AsRef<str>>(
         mut self,
         lib_dir: P,
@@ -381,6 +390,7 @@ impl Builder {
                 &lib_dir,
                 lockfile,
                 binding_lib_name.as_deref(),
+                self.lib_version.as_deref(),
                 self.config.parse.parse_deps,
                 self.config.parse.clean,
                 self.config.only_target_dependencies,
